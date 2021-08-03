@@ -1,6 +1,19 @@
 /* --------------------
    Case Study Questions
    --------------------*/
+   
+-- 1. What is the total amount each customer spent at the restaurant?
+-- 2. How many days has each customer visited the restaurant?
+-- 3. What was the first item from the menu purchased by each customer?
+-- 4. What is the most purchased item on the menu and how many times was it purchased by all customers?
+-- 5. Which item was the most popular for each customer?
+-- 6. Which item was purchased first by the customer after they became a member?
+-- 7. Which item was purchased just before the customer became a member?
+-- 8. What is the total items and amount spent for each member before they became a member?
+-- 9.  If each $1 spent equates to 10 points and sushi has a 2x points multiplier - how many points would each customer have?
+-- 10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, 
+-- not just sushi - how many points do customer A and B have at the end of January?
+
 
 -- 1. What is the total amount each customer spent at the restaurant?
 
@@ -11,6 +24,12 @@ LEFT JOIN dannys_diner.menu b ON a.product_id=b.product_id
 GROUP BY 1
 ORDER BY 1 ASC;
 
+| customer_id | total_revenue |
+| ----------- | ------------- |
+| A	      | 76            |
+| B	      | 74            |
+| C	      | 36            |
+
 
 -- 2. How many days has each customer visited the restaurant?
 
@@ -20,15 +39,33 @@ FROM dannys_diner.sales
 GROUP BY 1
 ORDER BY 1 ASC;
 
+| customer_id | days_visited |
+| ----------- | ------------ |
+| A	      | 4	     |
+| B	      | 6	     |
+| C	      | 2	     |
+
 
 -- 3. What was the first item from the menu purchased by each customer?
 
-SELECT product_id,
-		COUNT(product_id) max_num_purchased
-FROM dannys_diner.sales
-GROUP BY 1
-ORDER BY 2 DESC
-LIMIT 1;
+SELECT customer_id,
+	product_id
+FROM 
+(
+  SELECT DENSE_RANK() OVER(PARTITION BY customer_id ORDER BY order_date) rank,
+  		 customer_id,
+  		 product_id
+  FROM dannys_diner.sales
+) ranked
+WHERE rank = 1
+
+| customer_id | product_id |
+| ----------- | ---------- |
+| A	      | 1          |
+| A	      | 2          |
+| B	      | 2          |
+| C	      | 3          |
+| C	      | 3          |
 
 
 -- 4. What is the most purchased item on the menu and how many times was it purchased by all customers?
@@ -50,6 +87,12 @@ FROM prod_rank a
 INNER JOIN dannys_diner.sales b ON a.product_id=b.product_id AND rank = 1
 GROUP BY 1, 2;
 
+| most_purchased_item | customer_id | item_sold |
+| ------------------- | ----------- | --------- |
+| 3	              | A	    | 3		|
+| 3	              | B	    | 2		|
+| 3	              | C	    | 3		|
+
 
 -- 5. Which item was the most popular for each customer?
 
@@ -69,6 +112,14 @@ SELECT customer_id,
 		item_sold
 FROM item_sold_per_cust
 WHERE rank = 1;
+
+| customer_id | product_id | item_sold |
+| ----------- | ---------- | --------- |
+A	      | 3	   | 3	       |
+B	      | 1	   | 2	       |
+B	      | 2	   | 2	       |
+B	      | 3	   | 2	       |
+C	      | 3	   | 3	       |
 
 
 -- 6. Which item was purchased first by the customer after they became a member?
@@ -93,6 +144,11 @@ INNER JOIN dannys_diner.menu b ON a.product_id=b.product_id
 WHERE a.rank = 1
 ORDER BY 1;
 
+| customer_id | product_id | product_name |
+| ----------- | ---------- | ------------ |
+| A	      | 2	   | curry	  |
+| B	      | 1	   | sushi	  |
+
 
 -- 7. Which item was purchased just before the customer became a member?
 
@@ -116,6 +172,12 @@ INNER JOIN dannys_diner.menu b ON a.product_id=b.product_id
 WHERE a.rank = 1
 ORDER BY 1;
 
+| customer_id | product_id | product_name |
+| ----------- | ---------- | ------------ |
+| A	      | 1	   | sushi	  |
+| A	      | 2	   | curry	  |
+| B	      | 1	   | sushi	  |
+
 
 -- 8. What is the total items and amount spent for each member before they became a member?
 
@@ -127,6 +189,11 @@ INNER JOIN dannys_diner.menu b ON a.product_id=b.product_id
 INNER JOIN dannys_diner.members c ON a.customer_id=c.customer_id AND a.order_date < c.join_date
 GROUP BY 1
 ORDER BY 1;
+
+| customer_id | total_items | amount_spent |
+| ----------- | ----------- | ------------ |
+| A	      | 2	    | 25	   |
+| B	      | 3	    | 40	   |
 
 
 -- 9.  If each $1 spent equates to 10 points and sushi has a 2x points multiplier - how many points would each customer have?
@@ -141,7 +208,14 @@ INNER JOIN dannys_diner.menu b ON a.product_id=b.product_id
 GROUP BY 1
 ORDER BY 1;
 
-10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at the end of January?
+| customer_id | points	   |
+| ----------- | ---------- |
+| A	      | 860        | 
+| B	      | 940        | 
+| C	      | 360        | 
+
+-- 10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, 
+-- not just sushi - how many points do customer A and B have at the end of January?
 
 SELECT a.customer_id,
   		SUM(CASE 
@@ -152,6 +226,11 @@ FROM dannys_diner.sales a
 INNER JOIN dannys_diner.members b ON a.customer_id=b.customer_id AND order_date BETWEEN join_date AND '2021-01-31'
 INNER JOIN dannys_diner.menu c ON a.product_id=c.product_id
 GROUP BY 1;
+
+| customer_id | points	   |
+| ----------- | ---------- |
+| B	      | 320	   |
+| A	      | 1020	   |
 
 
 -- BONUS QUESTION
@@ -171,6 +250,24 @@ INNER JOIN dannys_diner.menu b ON a.product_id=b.product_id
 LEFT JOIN dannys_diner.members c ON a.customer_id=c.customer_id
 ORDER BY 1, 2;
 
+| customer_id | order_date               | product_name | price | member |
+| ----------- | ------------------------ | ------------ | ----- | ------ |
+| A	      | 2021-01-01T00:00:00.000Z | sushi 	| 10	| N	 |
+| A	      | 2021-01-01T00:00:00.000Z | curry	| 15	| N	 |
+| A	      | 2021-01-07T00:00:00.000Z | curry	| 15	| Y	 |
+| A	      | 2021-01-10T00:00:00.000Z | ramen	| 12	| Y	 |
+| A	      | 2021-01-11T00:00:00.000Z | ramen	| 12	| Y	 |
+| A	      | 2021-01-11T00:00:00.000Z | ramen	| 12	| Y	 |
+| B	      | 2021-01-01T00:00:00.000Z | curry	| 15	| N	 |
+| B	      | 2021-01-02T00:00:00.000Z | curry	| 15	| N	 |
+| B	      | 2021-01-04T00:00:00.000Z | sushi	| 10	| N	 |
+| B	      | 2021-01-11T00:00:00.000Z | sushi	| 10	| Y	 |
+| B	      | 2021-01-16T00:00:00.000Z | ramen	| 12	| Y	 |
+| B	      | 2021-02-01T00:00:00.000Z | ramen	| 12	| Y	 |
+| C	      | 2021-01-01T00:00:00.000Z | ramen	| 12	| N	 |
+| C 	      | 2021-01-01T00:00:00.000Z | ramen	| 12	| N	 |
+| C	      | 2021-01-07T00:00:00.000Z | ramen	| 12	| N	 |
+ 
 
 -- #1 Rank All The Things
 
@@ -188,3 +285,22 @@ FROM dannys_diner.sales a
 INNER JOIN dannys_diner.menu b ON a.product_id=b.product_id
 LEFT JOIN dannys_diner.members c ON a.customer_id=c.customer_id
 ORDER BY 1, 2;
+
+| customer_id | order_date               | product_name | price | member | ranking |
+| ----------- | ------------------------ | ------------ | ----- | ------ | ------- |
+| A	      | 2021-01-01T00:00:00.000Z | sushi 	| 10	| N	 | null	   |
+| A	      | 2021-01-01T00:00:00.000Z | curry	| 15	| N	 | null	   |
+| A	      | 2021-01-07T00:00:00.000Z | curry	| 15	| Y	 | 1	   |
+| A	      | 2021-01-10T00:00:00.000Z | ramen	| 12	| Y	 | 2	   |
+| A	      | 2021-01-11T00:00:00.000Z | ramen	| 12	| Y	 | 3	   |
+| A	      | 2021-01-11T00:00:00.000Z | ramen	| 12	| Y	 | 3	   |
+| B	      | 2021-01-01T00:00:00.000Z | curry	| 15	| N	 | null	   |
+| B	      | 2021-01-02T00:00:00.000Z | curry	| 15	| N	 | null	   |
+| B	      | 2021-01-04T00:00:00.000Z | sushi	| 10	| N	 | null	   |
+| B	      | 2021-01-11T00:00:00.000Z | sushi	| 10	| Y	 | 1	   |
+| B	      | 2021-01-16T00:00:00.000Z | ramen	| 12	| Y	 | 2	   |
+| B	      | 2021-02-01T00:00:00.000Z | ramen	| 12	| Y	 | 3	   |
+| C	      | 2021-01-01T00:00:00.000Z | ramen	| 12	| N	 | null	   |
+| C 	      | 2021-01-01T00:00:00.000Z | ramen	| 12	| N	 | null	   |
+| C	      | 2021-01-07T00:00:00.000Z | ramen	| 12	| N	 | null	   |
+
